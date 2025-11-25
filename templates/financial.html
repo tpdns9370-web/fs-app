@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재무 정보 시각화 - {{ corp_info.corp_name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-item label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .control-item select,
+        .control-item input {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .control-item select:focus,
+        .control-item input:focus {
+            border-color: #667eea;
+        }
+
+        .load-btn {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            align-self: flex-end;
+        }
+
+        .load-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .chart-card[style*="grid-column"] {
+            border: 3px solid #667eea;
+        }
+
+        .validation-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .chart-card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 12px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            color: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← 검색 페이지로 돌아가기</a>
+        
+        <div class="header">
+            <h1>📊 {{ corp_info.corp_name }} 재무 정보</h1>
+            <div class="header-info">
+                <div><strong>고유번호:</strong> {{ corp_info.corp_code }}</div>
+                <div><strong>종목코드:</strong> {{ corp_info.stock_code or '-' }}</div>
+                <div><strong>영문명:</strong> {{ corp_info.corp_eng_name or '-' }}</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-item">
+                    <label>사업연도</label>
+                    <input type="number" id="bsnsYear" min="2015" max="2024" value="{{ current_year }}" placeholder="예: 2023">
+                </div>
+                <div class="control-item">
+                    <label>보고서 유형</label>
+                    <select id="reprtCode">
+                        <option value="11011">사업보고서</option>
+                        <option value="11012">반기보고서</option>
+                        <option value="11013">1분기보고서</option>
+                        <option value="11014">3분기보고서</option>
+                    </select>
+                </div>
+                <button class="load-btn" onclick="loadFinancialData()">재무 데이터 불러오기</button>
+            </div>
+        </div>
+
+        <div id="chartsArea"></div>
+
+        <div id="aiAnalysisArea" style="display: none;">
+            <div class="chart-card" style="margin-top: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>🤖 AI 재무 분석</h2>
+                    <button class="load-btn" onclick="analyzeWithAI()" id="analyzeBtn">AI 분석 시작</button>
+                </div>
+                <div id="aiAnalysisResult" style="min-height: 200px;">
+                    <div style="text-align: center; color: #666; padding: 40px;">
+                        재무 데이터를 불러온 후 AI 분석을 시작할 수 있습니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const corpCode = '{{ corp_info.corp_code }}';
+        let charts = {};
+        let currentFinancialData = null;
+
+        function loadFinancialData() {
+            const bsnsYear = document.getElementById('bsnsYear').value;
+            const reprtCode = document.getElementById('reprtCode').value;
+
+            if (!bsnsYear) {
+                alert('사업연도를 입력해주세요.');
+                return;
+            }
+
+            // 기존 차트 제거
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // 로딩 표시
+            document.getElementById('chartsArea').innerHTML = '<div class="loading"><div class="spinner"></div>재무 데이터를 불러오는 중...</div>';
+
+            // API 호출
+            fetch(`/api/financial?corp_code=${corpCode}&bsns_year=${bsnsYear}&reprt_code=${reprtCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentFinancialData = data.data;
+                        displayCharts(data.data);
+                        // AI 분석 영역 표시
+                        document.getElementById('aiAnalysisArea').style.display = 'block';
+                        // AI 분석 결과 초기화
+                        document.getElementById('aiAnalysisResult').innerHTML = 
+                            '<div style="text-align: center; color: #666; padding: 40px;">재무 데이터가 로드되었습니다. AI 분석을 시작하세요.</div>';
+                    } else {
+                        document.getElementById('chartsArea').innerHTML = 
+                            `<div class="error"><h2>오류 발생</h2><p>${data.message || '데이터를 불러올 수 없습니다.'}</p></div>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('chartsArea').innerHTML = 
+                        `<div class="error"><h2>오류 발생</h2><p>${error.message}</p></div>`;
+                });
+        }
+
+        function displayCharts(data) {
+            if (!data || !data.balance_sheet || !data.income_statement) {
+                document.getElementById('chartsArea').innerHTML = 
+                    '<div class="error"><h2>데이터 없음</h2><p>해당 연도의 재무 데이터가 없습니다.</p></div>';
+                return;
+            }
+
+            const chartsHTML = `
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h2>재무상태표 주요 계정</h2>
+                        <div class="chart-container">
+                            <canvas id="balanceSheetChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h2>손익계산서 주요 계정</h2>
+                        <div class="chart-container">
+                            <canvas id="incomeStatementChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h2>자산 구조 분석</h2>
+                        <div class="chart-container">
+                            <canvas id="assetStructureChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h2>부채/자본 구조</h2>
+                        <div class="chart-container">
+                            <canvas id="liabilityEquityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card" style="grid-column: 1 / -1;">
+                        <h2>📐 자산 = 부채 + 자본 (회계 방정식)</h2>
+                        <div class="chart-container">
+                            <canvas id="accountingEquationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('chartsArea').innerHTML = chartsHTML;
+
+            // 재무상태표 차트
+            createBalanceSheetChart(data.balance_sheet);
+            
+            // 손익계산서 차트
+            createIncomeStatementChart(data.income_statement);
+            
+            // 자산 구조 차트
+            createAssetStructureChart(data.balance_sheet);
+            
+            // 부채/자본 구조 차트
+            createLiabilityEquityChart(data.balance_sheet);
+            
+            // 자산 = 부채 + 자본 차트
+            createAccountingEquationChart(data.balance_sheet);
+        }
+
+        function formatAmount(amount) {
+            if (amount >= 1000000000000) {
+                return (amount / 1000000000000).toFixed(2) + '조';
+            } else if (amount >= 100000000) {
+                return (amount / 100000000).toFixed(2) + '억';
+            } else if (amount >= 10000) {
+                return (amount / 10000).toFixed(2) + '만';
+            }
+            return amount.toLocaleString();
+        }
+
+        function createBalanceSheetChart(bs) {
+            const ctx = document.getElementById('balanceSheetChart').getContext('2d');
+            
+            const labels = [];
+            const assetData = [];
+            const liabilityData = [];
+            const equityData = [];
+
+            if (bs['자산총계']) {
+                labels.push('당기');
+                assetData.push(bs['자산총계'].thstrm_amount);
+                liabilityData.push(bs['부채총계']?.thstrm_amount || 0);
+                equityData.push(bs['자본총계']?.thstrm_amount || 0);
+            }
+            if (bs['자산총계']?.frmtrm_amount) {
+                labels.push('전기');
+                assetData.push(bs['자산총계'].frmtrm_amount);
+                liabilityData.push(bs['부채총계']?.frmtrm_amount || 0);
+                equityData.push(bs['자본총계']?.frmtrm_amount || 0);
+            }
+            if (bs['자산총계']?.bfefrmtrm_amount) {
+                labels.push('전전기');
+                assetData.push(bs['자산총계'].bfefrmtrm_amount);
+                liabilityData.push(bs['부채총계']?.bfefrmtrm_amount || 0);
+                equityData.push(bs['자본총계']?.bfefrmtrm_amount || 0);
+            }
+
+            charts.balanceSheet = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '자산총계',
+                            data: assetData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        },
+                        {
+                            label: '부채총계',
+                            data: liabilityData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        },
+                        {
+                            label: '자본총계',
+                            data: equityData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatAmount(context.parsed.y) + '원';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatAmount(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createIncomeStatementChart(is) {
+            const ctx = document.getElementById('incomeStatementChart').getContext('2d');
+            
+            const labels = [];
+            const revenueData = [];
+            const operatingIncomeData = [];
+            const netIncomeData = [];
+
+            if (is['매출액']) {
+                labels.push('당기');
+                revenueData.push(is['매출액'].thstrm_amount);
+                operatingIncomeData.push(is['영업이익']?.thstrm_amount || 0);
+                netIncomeData.push(is['당기순이익(손실)']?.thstrm_amount || 0);
+            }
+            if (is['매출액']?.frmtrm_amount) {
+                labels.push('전기');
+                revenueData.push(is['매출액'].frmtrm_amount);
+                operatingIncomeData.push(is['영업이익']?.frmtrm_amount || 0);
+                netIncomeData.push(is['당기순이익(손실)']?.frmtrm_amount || 0);
+            }
+            if (is['매출액']?.bfefrmtrm_amount) {
+                labels.push('전전기');
+                revenueData.push(is['매출액'].bfefrmtrm_amount);
+                operatingIncomeData.push(is['영업이익']?.bfefrmtrm_amount || 0);
+                netIncomeData.push(is['당기순이익(손실)']?.bfefrmtrm_amount || 0);
+            }
+
+            charts.incomeStatement = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '매출액',
+                            data: revenueData,
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '영업이익',
+                            data: operatingIncomeData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '당기순이익',
+                            data: netIncomeData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatAmount(context.parsed.y) + '원';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatAmount(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createAssetStructureChart(bs) {
+            const ctx = document.getElementById('assetStructureChart').getContext('2d');
+            
+            const currentAssets = bs['유동자산']?.thstrm_amount || 0;
+            const nonCurrentAssets = bs['비유동자산']?.thstrm_amount || 0;
+
+            charts.assetStructure = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['유동자산', '비유동자산'],
+                    datasets: [{
+                        data: [currentAssets, nonCurrentAssets],
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + formatAmount(context.parsed) + '원 (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createLiabilityEquityChart(bs) {
+            const ctx = document.getElementById('liabilityEquityChart').getContext('2d');
+            
+            const currentLiabilities = bs['유동부채']?.thstrm_amount || 0;
+            const nonCurrentLiabilities = bs['비유동부채']?.thstrm_amount || 0;
+            const equity = bs['자본총계']?.thstrm_amount || 0;
+
+            charts.liabilityEquity = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['유동부채', '비유동부채', '자본총계'],
+                    datasets: [{
+                        data: [currentLiabilities, nonCurrentLiabilities, equity],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(255, 159, 64, 0.8)',
+                            'rgba(75, 192, 192, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + formatAmount(context.parsed) + '원 (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createAccountingEquationChart(bs) {
+            const ctx = document.getElementById('accountingEquationChart').getContext('2d');
+            
+            // 당기 데이터
+            const asset = bs['자산총계']?.thstrm_amount || 0;
+            const liability = bs['부채총계']?.thstrm_amount || 0;
+            const equity = bs['자본총계']?.thstrm_amount || 0;
+            const calculatedEquity = asset - liability; // 계산된 자본
+            
+            // 전기 데이터
+            const assetPrev = bs['자산총계']?.frmtrm_amount || 0;
+            const liabilityPrev = bs['부채총계']?.frmtrm_amount || 0;
+            const equityPrev = bs['자본총계']?.frmtrm_amount || 0;
+            
+            // 전전기 데이터
+            const assetPrev2 = bs['자산총계']?.bfefrmtrm_amount || 0;
+            const liabilityPrev2 = bs['부채총계']?.bfefrmtrm_amount || 0;
+            const equityPrev2 = bs['자본총계']?.bfefrmtrm_amount || 0;
+
+            const labels = [];
+            const assetData = [];
+            const liabilityData = [];
+            const equityData = [];
+            const calculatedEquityData = [];
+
+            if (asset > 0) {
+                labels.push('당기');
+                assetData.push(asset);
+                liabilityData.push(liability);
+                equityData.push(equity);
+                calculatedEquityData.push(calculatedEquity);
+            }
+            if (assetPrev > 0) {
+                labels.push('전기');
+                assetData.push(assetPrev);
+                liabilityData.push(liabilityPrev);
+                equityData.push(equityPrev);
+                calculatedEquityData.push(assetPrev - liabilityPrev);
+            }
+            if (assetPrev2 > 0) {
+                labels.push('전전기');
+                assetData.push(assetPrev2);
+                liabilityData.push(liabilityPrev2);
+                equityData.push(equityPrev2);
+                calculatedEquityData.push(assetPrev2 - liabilityPrev2);
+            }
+
+            charts.accountingEquation = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '자산총계',
+                            data: assetData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                            order: 1
+                        },
+                        {
+                            label: '부채총계',
+                            data: liabilityData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                            order: 2
+                        },
+                        {
+                            label: '자본총계 (보고서)',
+                            data: equityData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                            order: 3
+                        },
+                        {
+                            label: '자본총계 (계산: 자산 - 부채)',
+                            data: calculatedEquityData,
+                            backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            order: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatAmount(context.parsed.y) + '원';
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                equation: {
+                                    type: 'label',
+                                    content: '자산 = 부채 + 자본',
+                                    position: 'top',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    },
+                                    color: '#333'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            stacked: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatAmount(value);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '금액 (원)',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 차트 아래에 검증 정보 표시
+            const chartCard = document.getElementById('accountingEquationChart').closest('.chart-card');
+            let validationDiv = chartCard.querySelector('.validation-info');
+            if (!validationDiv) {
+                validationDiv = document.createElement('div');
+                validationDiv.className = 'validation-info';
+                validationDiv.style.cssText = 'margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;';
+                chartCard.appendChild(validationDiv);
+            }
+
+            let validationHTML = '<div style="font-weight: bold; margin-bottom: 10px; color: #333;">📊 회계 방정식 검증:</div>';
+            
+            if (asset > 0) {
+                const diff = Math.abs(asset - (liability + equity));
+                const diffPercent = asset > 0 ? ((diff / asset) * 100).toFixed(4) : 0;
+                const isValid = diff < 1000000; // 100만원 이하 차이는 허용 (반올림 오차)
+                validationHTML += `
+                    <div style="margin-bottom: 8px;">
+                        <strong>당기:</strong> 
+                        자산총계 (${formatAmount(asset)}원) 
+                        ${isValid ? '✅' : '⚠️'} 
+                        부채총계 (${formatAmount(liability)}원) + 자본총계 (${formatAmount(equity)}원) 
+                        = ${formatAmount(liability + equity)}원
+                        ${diff > 1000000 ? `<span style="color: #e74c3c;">차이: ${formatAmount(diff)}원 (${diffPercent}%)</span>` : '<span style="color: #27ae60;">정확히 일치합니다!</span>'}
+                    </div>
+                `;
+            }
+            
+            if (assetPrev > 0) {
+                const diff = Math.abs(assetPrev - (liabilityPrev + equityPrev));
+                const isValid = diff < 1000000;
+                validationHTML += `
+                    <div style="margin-bottom: 8px;">
+                        <strong>전기:</strong> 
+                        자산총계 (${formatAmount(assetPrev)}원) 
+                        ${isValid ? '✅' : '⚠️'} 
+                        부채총계 (${formatAmount(liabilityPrev)}원) + 자본총계 (${formatAmount(equityPrev)}원) 
+                        = ${formatAmount(liabilityPrev + equityPrev)}원
+                        ${diff > 1000000 ? `<span style="color: #e74c3c;">차이: ${formatAmount(diff)}원</span>` : '<span style="color: #27ae60;">정확히 일치합니다!</span>'}
+                    </div>
+                `;
+            }
+            
+            if (assetPrev2 > 0) {
+                const diff = Math.abs(assetPrev2 - (liabilityPrev2 + equityPrev2));
+                const isValid = diff < 1000000;
+                validationHTML += `
+                    <div>
+                        <strong>전전기:</strong> 
+                        자산총계 (${formatAmount(assetPrev2)}원) 
+                        ${isValid ? '✅' : '⚠️'} 
+                        부채총계 (${formatAmount(liabilityPrev2)}원) + 자본총계 (${formatAmount(equityPrev2)}원) 
+                        = ${formatAmount(liabilityPrev2 + equityPrev2)}원
+                        ${diff > 1000000 ? `<span style="color: #e74c3c;">차이: ${formatAmount(diff)}원</span>` : '<span style="color: #27ae60;">정확히 일치합니다!</span>'}
+                    </div>
+                `;
+            }
+            
+            validationDiv.innerHTML = validationHTML;
+        }
+
+        function analyzeWithAI() {
+            if (!currentFinancialData) {
+                alert('먼저 재무 데이터를 불러와주세요.');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const resultDiv = document.getElementById('aiAnalysisResult');
+            
+            // 버튼 비활성화 및 로딩 표시
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '분석 중...';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>AI가 재무 데이터를 분석하는 중입니다. 잠시만 기다려주세요...</div>';
+
+            // AI 분석 API 호출
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    corp_code: corpCode,
+                    financial_data: currentFinancialData
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'AI 분석 시작';
+                
+                if (data.success) {
+                    // 마크다운 형식의 텍스트를 HTML로 변환
+                    const analysisText = data.analysis;
+                    const formattedText = formatAnalysisText(analysisText);
+                    resultDiv.innerHTML = `
+                        <div style="line-height: 1.8; color: #333;">
+                            ${formattedText}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>분석 오류</h3>
+                            <p><strong>오류 메시지:</strong> ${data.message || 'AI 분석을 수행할 수 없습니다.'}</p>
+                            <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                                재무 데이터가 올바르게 로드되었는지 확인해주세요.
+                            </p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'AI 분석 시작';
+                console.error('AI 분석 오류:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>오류 발생</h3>
+                        <p><strong>오류 메시지:</strong> ${error.message || '알 수 없는 오류가 발생했습니다.'}</p>
+                        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                            서버 콘솔을 확인하거나 잠시 후 다시 시도해주세요.
+                        </p>
+                    </div>
+                `;
+            });
+        }
+
+        function formatAnalysisText(text) {
+            // 마크다운 스타일을 HTML로 변환
+            let html = text;
+            
+            // 제목 변환 (# -> <h3>, ## -> <h4>)
+            html = html.replace(/^### (.*$)/gim, '<h3 style="color: #667eea; margin-top: 25px; margin-bottom: 15px; font-size: 1.3em; border-bottom: 2px solid #667eea; padding-bottom: 8px;">$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h3 style="color: #667eea; margin-top: 25px; margin-bottom: 15px; font-size: 1.3em; border-bottom: 2px solid #667eea; padding-bottom: 8px;">$1</h3>');
+            html = html.replace(/^# (.*$)/gim, '<h2 style="color: #667eea; margin-top: 30px; margin-bottom: 20px; font-size: 1.5em;">$1</h2>');
+            
+            // 번호 목록 변환
+            html = html.replace(/^\d+\.\s+(.*$)/gim, '<div style="margin: 8px 0; padding-left: 20px; position: relative;"><span style="position: absolute; left: 0; color: #667eea; font-weight: bold;">•</span> $1</div>');
+            
+            // 강조 표시 (**텍스트** -> <strong>)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #333;">$1</strong>');
+            
+            // 줄바꿈 처리
+            html = html.replace(/\n\n/g, '</p><p style="margin: 15px 0;">');
+            html = html.replace(/\n/g, '<br>');
+            
+            // 문단 태그 추가
+            html = '<p style="margin: 15px 0;">' + html + '</p>';
+            
+            return html;
+        }
+
+        // 페이지 로드 시 최근 연도 데이터 자동 로드
+        window.onload = function() {
+            const currentYear = new Date().getFullYear();
+            document.getElementById('bsnsYear').value = currentYear - 1; // 작년 데이터
+            loadFinancialData();
+        };
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오픈다트 회사 검색</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        .stats {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: 200px;
+        }
+
+        .results-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .results-header h2 {
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .results-count {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .results-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .result-item {
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .result-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .result-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .financial-link {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            display: inline-block;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .financial-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .corp-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .corp-code {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .detail-item {
+            display: flex;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #999;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .no-results-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .result-item-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 오픈다트 회사 검색</h1>
+            <p>회사명을 입력하여 고유번호(corp_code)를 검색하세요</p>
+        </div>
+
+        <div class="stats" id="stats">
+            로딩 중...
+        </div>
+
+        <div class="search-box">
+            <form class="search-form" id="searchForm">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput" 
+                    placeholder="회사명을 입력하세요 (예: 삼성전자, 카카오)"
+                    autocomplete="off"
+                >
+                <button type="submit" class="search-btn">검색</button>
+            </form>
+        </div>
+
+        <div class="results-container" id="resultsContainer" style="display: none;">
+            <div class="results-header">
+                <h2>검색 결과</h2>
+                <div class="results-count" id="resultsCount"></div>
+            </div>
+            <div class="results-list" id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // 통계 정보 로드
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('stats').textContent = 
+                    `총 ${data.total_count.toLocaleString()}개의 회사 정보가 등록되어 있습니다.`;
+            })
+            .catch(error => {
+                document.getElementById('stats').textContent = '통계 정보를 불러올 수 없습니다.';
+            });
+
+        // 검색 폼 제출 처리
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            performSearch();
+        });
+
+        // Enter 키로 검색
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                alert('검색어를 입력해주세요.');
+                return;
+            }
+
+            // 로딩 표시
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsList = document.getElementById('resultsList');
+            resultsContainer.style.display = 'block';
+            resultsList.innerHTML = '<div class="loading"><div class="spinner"></div>검색 중...</div>';
+
+            // 검색 API 호출
+            fetch(`/api/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayResults(data);
+                })
+                .catch(error => {
+                    resultsList.innerHTML = '<div class="no-results">검색 중 오류가 발생했습니다.</div>';
+                    console.error('Error:', error);
+                });
+        }
+
+        function displayResults(data) {
+            const resultsList = document.getElementById('resultsList');
+            const resultsCount = document.getElementById('resultsCount');
+
+            if (!data.success || data.results.length === 0) {
+                resultsList.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔍</div>
+                        <div>검색 결과가 없습니다.</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">다른 검색어로 시도해보세요.</div>
+                    </div>
+                `;
+                resultsCount.textContent = `검색어: "${data.query}" - 결과 없음`;
+                return;
+            }
+
+            resultsCount.textContent = `검색어: "${data.query}" - ${data.count}개 발견`;
+
+            resultsList.innerHTML = data.results.map(corp => `
+                <div class="result-item">
+                    <div class="result-item-header">
+                        <div class="corp-name">${escapeHtml(corp.corp_name || '-')}</div>
+                        <div class="corp-code">${escapeHtml(corp.corp_code || '-')}</div>
+                    </div>
+                    <div class="result-details">
+                        <div class="detail-item">
+                            <span class="detail-label">영문명:</span>
+                            <span>${escapeHtml(corp.corp_eng_name || '-')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">종목코드:</span>
+                            <span>${escapeHtml(corp.stock_code || '-')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">수정일자:</span>
+                            <span>${escapeHtml(corp.modify_date || '-')}</span>
+                        </div>
+                    </div>
+                    ${corp.corp_code ? `<a href="/financial/${escapeHtml(corp.corp_code)}" class="financial-link">📊 재무 정보 보기</a>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+
