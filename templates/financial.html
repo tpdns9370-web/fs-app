@@ -32,6 +32,14 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
+        .last-updated {
+            max-width: 1400px;
+            margin: 0 auto 10px auto;
+            color: rgba(255,255,255,0.85);
+            font-size: 0.8em;
+            text-align: right;
+        }
+
         .header h1 {
             color: #333;
             font-size: 2em;
@@ -147,31 +155,6 @@
             line-height: 1.6;
         }
 
-        #balanceSheetBox {
-            background: white;
-            border-radius: 8px;
-        }
-
-        @media (max-width: 1024px) {
-            #balanceSheetBox > div:first-child {
-                flex-direction: column !important;
-                gap: 30px !important;
-            }
-            
-            #balanceSheetBox > div:first-child > div:first-child {
-                order: 1;
-            }
-            
-            #balanceSheetBox > div:first-child > div:nth-child(2) {
-                order: 2;
-                margin-bottom: 0 !important;
-            }
-            
-            #balanceSheetBox > div:first-child > div:last-child {
-                order: 3;
-            }
-        }
-
         .chart-card h2 {
             color: #333;
             margin-bottom: 20px;
@@ -181,31 +164,6 @@
         .chart-container {
             position: relative;
             height: 400px;
-        }
-
-        #balanceSheetBox {
-            background: white;
-            border-radius: 8px;
-        }
-
-        @media (max-width: 1024px) {
-            #balanceSheetBox > div:first-child {
-                flex-direction: column !important;
-                gap: 30px !important;
-            }
-            
-            #balanceSheetBox > div:first-child > div:first-child {
-                order: 1;
-            }
-            
-            #balanceSheetBox > div:first-child > div:nth-child(2) {
-                order: 2;
-                margin-bottom: 0 !important;
-            }
-            
-            #balanceSheetBox > div:first-child > div:last-child {
-                order: 3;
-            }
         }
 
         .loading {
@@ -251,6 +209,7 @@
     </style>
 </head>
 <body>
+    <div class="last-updated">Last updated: {{ last_updated }}</div>
     <div class="container">
         <a href="/" class="back-link">← 검색 페이지로 돌아가기</a>
         
@@ -384,7 +343,8 @@
                     </div>
                     <div class="chart-card" style="grid-column: 1 / -1;">
                         <h2>📦 재무상태표 박스 시각화</h2>
-                        <div id="balanceSheetBox" style="min-height: 500px; padding: 20px;"></div>
+                        <!-- 불필요한 하단 여백 제거: min-height, padding-bottom 제거 -->
+                        <div id="balanceSheetBox" style="padding: 0 20px;"></div>
                     </div>
                 </div>
             `;
@@ -861,168 +821,6 @@
             validationDiv.innerHTML = validationHTML;
         }
 
-        function createBalanceSheetBox(bs) {
-            const container = document.getElementById('balanceSheetBox');
-            
-            if (!bs || !bs['자산총계'] || !bs['부채총계'] || !bs['자본총계']) {
-                container.innerHTML = '<div class="error">재무상태표 데이터가 없습니다.</div>';
-                return;
-            }
-
-            // 당기 데이터
-            const asset = bs['자산총계'].thstrm_amount || 0;
-            const liability = bs['부채총계'].thstrm_amount || 0;
-            const equity = bs['자본총계'].thstrm_amount || 0;
-            
-            // 전기 데이터 (있는 경우)
-            const assetPrev = bs['자산총계'].frmtrm_amount || 0;
-            const liabilityPrev = bs['부채총계'].frmtrm_amount || 0;
-            const equityPrev = bs['자본총계'].frmtrm_amount || 0;
-
-            // 최대값 계산 (비율 계산용)
-            const maxValue = Math.max(asset, liability + equity, assetPrev, liabilityPrev + equityPrev);
-            
-            // 높이 계산 함수 (최소 100px, 최대 600px)
-            const calculateHeight = (value) => {
-                if (maxValue === 0) return 100;
-                const ratio = value / maxValue;
-                return Math.max(100, Math.min(600, ratio * 500 + 100));
-            };
-
-            const assetHeight = calculateHeight(asset);
-            const liabilityHeight = calculateHeight(liability);
-            const equityHeight = calculateHeight(equity);
-
-            // 박스 HTML 생성
-            const boxHTML = `
-                <div style="display: flex; justify-content: center; align-items: flex-end; gap: 60px; padding: 40px 20px;">
-                    <!-- 좌측: 자산 -->
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-                        <div style="
-                            width: 200px;
-                            height: ${assetHeight}px;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: center;
-                            color: white;
-                            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-                            transition: transform 0.3s;
-                            cursor: pointer;
-                        " 
-                        onmouseover="this.style.transform='scale(1.05)'"
-                        onmouseout="this.style.transform='scale(1)'">
-                            <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 10px;">자산</div>
-                            <div style="font-size: 1.4em; font-weight: 600;">${formatAmount(asset)}원</div>
-                            ${assetPrev > 0 ? `<div style="font-size: 0.9em; opacity: 0.9; margin-top: 8px;">전기: ${formatAmount(assetPrev)}원</div>` : ''}
-                        </div>
-                        <div style="font-size: 1.1em; font-weight: 600; color: #667eea;">자산총계</div>
-                    </div>
-
-                    <!-- 등호 -->
-                    <div style="
-                        font-size: 3em;
-                        font-weight: bold;
-                        color: #333;
-                        align-self: center;
-                        margin-bottom: ${(assetHeight - 50) / 2}px;
-                    ">=</div>
-
-                    <!-- 우측: 부채 + 자본 -->
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
-                        <div style="display: flex; gap: 30px; align-items: flex-end;">
-                            <!-- 부채 박스 -->
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                                <div style="
-                                    width: 180px;
-                                    height: ${liabilityHeight}px;
-                                    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                                    border-radius: 12px;
-                                    display: flex;
-                                    flex-direction: column;
-                                    justify-content: center;
-                                    align-items: center;
-                                    color: white;
-                                    box-shadow: 0 8px 24px rgba(245, 87, 108, 0.3);
-                                    transition: transform 0.3s;
-                                    cursor: pointer;
-                                "
-                                onmouseover="this.style.transform='scale(1.05)'"
-                                onmouseout="this.style.transform='scale(1)'">
-                                    <div style="font-size: 1.6em; font-weight: bold; margin-bottom: 8px;">부채</div>
-                                    <div style="font-size: 1.2em; font-weight: 600;">${formatAmount(liability)}원</div>
-                                    ${liabilityPrev > 0 ? `<div style="font-size: 0.85em; opacity: 0.9; margin-top: 6px;">전기: ${formatAmount(liabilityPrev)}원</div>` : ''}
-                                </div>
-                                <div style="font-size: 1em; font-weight: 600; color: #f5576c;">부채총계</div>
-                            </div>
-
-                            <!-- 플러스 기호 -->
-                            <div style="
-                                font-size: 2em;
-                                font-weight: bold;
-                                color: #666;
-                                align-self: center;
-                                margin-bottom: ${(Math.max(liabilityHeight, equityHeight) - 30) / 2}px;
-                            ">+</div>
-
-                            <!-- 자본 박스 -->
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                                <div style="
-                                    width: 180px;
-                                    height: ${equityHeight}px;
-                                    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-                                    border-radius: 12px;
-                                    display: flex;
-                                    flex-direction: column;
-                                    justify-content: center;
-                                    align-items: center;
-                                    color: white;
-                                    box-shadow: 0 8px 24px rgba(79, 172, 254, 0.3);
-                                    transition: transform 0.3s;
-                                    cursor: pointer;
-                                "
-                                onmouseover="this.style.transform='scale(1.05)'"
-                                onmouseout="this.style.transform='scale(1)'">
-                                    <div style="font-size: 1.6em; font-weight: bold; margin-bottom: 8px;">자본</div>
-                                    <div style="font-size: 1.2em; font-weight: 600;">${formatAmount(equity)}원</div>
-                                    ${equityPrev > 0 ? `<div style="font-size: 0.85em; opacity: 0.9; margin-top: 6px;">전기: ${formatAmount(equityPrev)}원</div>` : ''}
-                                </div>
-                                <div style="font-size: 1em; font-weight: 600; color: #00f2fe;">자본총계</div>
-                            </div>
-                        </div>
-                        
-                        <!-- 합계 표시 -->
-                        <div style="
-                            margin-top: 15px;
-                            padding: 12px 24px;
-                            background: #f8f9fa;
-                            border-radius: 8px;
-                            font-size: 1.1em;
-                            font-weight: 600;
-                            color: #333;
-                        ">
-                            부채 + 자본 = ${formatAmount(liability + equity)}원
-                            ${asset === (liability + equity) ? '<span style="color: #27ae60; margin-left: 10px;">✅</span>' : 
-                              Math.abs(asset - (liability + equity)) < 1000000 ? '<span style="color: #27ae60; margin-left: 10px;">✅ (반올림 오차)</span>' :
-                              '<span style="color: #e74c3c; margin-left: 10px;">⚠️ 차이: ' + formatAmount(Math.abs(asset - (liability + equity))) + '원</span>'}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 설명 텍스트 -->
-                <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                    <div style="font-size: 1.1em; color: #666; line-height: 1.6;">
-                        <strong style="color: #333;">재무상태표 공식:</strong> 자산총계 = 부채총계 + 자본총계<br>
-                        박스의 높이는 금액에 비례하여 표시됩니다. 마우스를 올리면 확대됩니다.
-                    </div>
-                </div>
-            `;
-
-            container.innerHTML = boxHTML;
-        }
-
         function analyzeWithAI() {
             if (!currentFinancialData) {
                 alert('먼저 재무 데이터를 불러와주세요.');
@@ -1120,6 +918,104 @@
             html = '<p style="margin: 15px 0;">' + html + '</p>';
             
             return html;
+        }
+
+        function createBalanceSheetBox(bs) {
+            const container = document.getElementById('balanceSheetBox');
+            
+            if (!bs || !bs['자산총계'] || !bs['부채총계'] || !bs['자본총계']) {
+                container.innerHTML = '<div class="error">재무상태표 데이터가 없습니다.</div>';
+                return;
+            }
+
+            // 데이터 추출
+            const asset = bs['자산총계'].thstrm_amount || 0;
+            const liability = bs['부채총계'].thstrm_amount || 0;
+            const equity = bs['자본총계'].thstrm_amount || 0;
+            const currentAsset = bs['유동자산']?.thstrm_amount || 0;
+            const nonCurrentAsset = bs['비유동자산']?.thstrm_amount || 0;
+            const currentLiability = bs['유동부채']?.thstrm_amount || 0;
+            const nonCurrentLiability = bs['비유동부채']?.thstrm_amount || 0;
+
+            // flex 비율(0 방지용 최소값 1 적용)
+            const aFlex = currentAsset > 0 ? currentAsset : 1;
+            const bFlex = nonCurrentAsset > 0 ? nonCurrentAsset : 1;
+            const cFlex = currentLiability > 0 ? currentLiability : 1;
+            const dFlex = nonCurrentLiability > 0 ? nonCurrentLiability : 1;
+            const eFlex = equity > 0 ? equity : 1;
+
+            // 박스 HTML (높이는 flex로만 채우고, px height 제거 → 남는 흰공간 0)
+            const boxHTML = `
+                <div style="text-align: center; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; font-size: 1.5em; font-weight: bold;">
+                    자산 = 부채 + 자본
+                </div>
+                
+                <div style="display: flex; justify-content: center; padding: 30px; max-width: 1200px; margin: 0 auto;">
+                    <div style="display: flex; width: 100%; min-height: 400px; border: 3px solid #667eea; border-radius: 16px; overflow: hidden;">
+                        <!-- 좌측: 자산 (a + b) -->
+                        <div style="flex: 1; display: flex; flex-direction: column;">
+                            <div style="flex: ${aFlex}; background: linear-gradient(135deg, #667eea 0%, #8b7fc8 100%); display: flex; justify-content: center; align-items: center; color: white; border-bottom: 2px solid rgba(255,255,255,0.3); font-size: 4em; font-weight: bold;">
+                                a
+                            </div>
+                            <div style="flex: ${bFlex}; background: linear-gradient(135deg, #764ba2 0%, #9b7fc8 100%); display: flex; justify-content: center; align-items: center; color: white; font-size: 4em; font-weight: bold;">
+                                b
+                            </div>
+                        </div>
+                        
+                        <!-- 등호 -->
+                        <div style="width: 60px; display: flex; align-items: center; justify-content: center; background: rgba(102, 126, 234, 0.1); font-size: 3em; font-weight: bold; color: #667eea;">
+                            =
+                        </div>
+                        
+                        <!-- 우측: 부채 + 자본 (c + d + e) -->
+                        <div style="flex: 1; display: flex; flex-direction: column;">
+                            <div style="flex: ${cFlex}; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); display: flex; justify-content: center; align-items: center; color: white; border-bottom: 2px solid rgba(255,255,255,0.3); font-size: 4em; font-weight: bold;">
+                                c
+                            </div>
+                            <div style="flex: ${dFlex}; background: linear-gradient(135deg, #f5576c 0%, #e84a5f 100%); display: flex; justify-content: center; align-items: center; color: white; border-bottom: 2px solid rgba(255,255,255,0.3); font-size: 4em; font-weight: bold;">
+                                d
+                            </div>
+                            <div style="flex: ${eFlex}; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); display: flex; justify-content: center; align-items: center; color: white; font-size: 4em; font-weight: bold;">
+                                e
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 각주 -->
+                <div style="max-width: 1200px; margin: 30px auto 0; padding: 25px; background: #f8f9fa; border-radius: 12px;">
+                    <div style="font-size: 1.1em; font-weight: 600; color: #333; margin-bottom: 15px; text-align: center;">구성요소 설명</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">a. 유동자산</div>
+                            <div style="font-size: 0.9em; color: #666;">${formatAmount(currentAsset)}원</div>
+                            ${asset > 0 ? `<div style="font-size: 0.85em; color: #999; margin-top: 3px;">(${((currentAsset / asset * 100).toFixed(1))}%)</div>` : ''}
+                        </div>
+                        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #764ba2;">
+                            <div style="font-weight: bold; color: #764ba2; margin-bottom: 5px;">b. 비유동자산</div>
+                            <div style="font-size: 0.9em; color: #666;">${formatAmount(nonCurrentAsset)}원</div>
+                            ${asset > 0 ? `<div style="font-size: 0.85em; color: #999; margin-top: 3px;">(${((nonCurrentAsset / asset * 100).toFixed(1))}%)</div>` : ''}
+                        </div>
+                        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #f5576c;">
+                            <div style="font-weight: bold; color: #f5576c; margin-bottom: 5px;">c. 유동부채</div>
+                            <div style="font-size: 0.9em; color: #666;">${formatAmount(currentLiability)}원</div>
+                            ${(liability + equity) > 0 ? `<div style="font-size: 0.85em; color: #999; margin-top: 3px;">(${((currentLiability / (liability + equity) * 100).toFixed(1))}%)</div>` : ''}
+                        </div>
+                        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #e84a5f;">
+                            <div style="font-weight: bold; color: #e84a5f; margin-bottom: 5px;">d. 비유동부채</div>
+                            <div style="font-size: 0.9em; color: #666;">${formatAmount(nonCurrentLiability)}원</div>
+                            ${(liability + equity) > 0 ? `<div style="font-size: 0.85em; color: #999; margin-top: 3px;">(${((nonCurrentLiability / (liability + equity) * 100).toFixed(1))}%)</div>` : ''}
+                        </div>
+                        <div style="padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #4facfe;">
+                            <div style="font-weight: bold; color: #4facfe; margin-bottom: 5px;">e. 자본총계</div>
+                            <div style="font-size: 0.9em; color: #666;">${formatAmount(equity)}원</div>
+                            ${(liability + equity) > 0 ? `<div style="font-size: 0.85em; color: #999; margin-top: 3px;">(${((equity / (liability + equity) * 100).toFixed(1))}%)</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = boxHTML;
         }
 
         // 페이지 로드 시 최근 연도 데이터 자동 로드

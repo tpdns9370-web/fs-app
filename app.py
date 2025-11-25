@@ -3,8 +3,15 @@ from corp_parser import CorpDatabase
 from opendart_api import OpenDartAPI
 from gemini_analyzer import GeminiAnalyzer
 import os
+from datetime import datetime
 
 app = Flask(__name__)
+
+# 모든 템플릿에 last_updated 주입
+# 매 요청 시점의 시간을 찍어서, 새로고침하면 항상 갱신되도록 함
+@app.context_processor
+def inject_last_updated():
+    return {'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 # XML 파일 경로
 XML_PATH = os.path.join(os.path.dirname(__file__), 'corp.xml')
