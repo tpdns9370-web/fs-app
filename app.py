@@ -24,6 +24,9 @@ OPENDART_API_KEY = os.getenv('OPENDART_API_KEY')
 opendart_api = None
 if OPENDART_API_KEY:
     opendart_api = OpenDartAPI(OPENDART_API_KEY)
+    print(f"오픈다트 API 초기화 성공")
+else:
+    print("경고: OPENDART_API_KEY 환경 변수가 설정되지 않았습니다.")
 
 # Gemini API 초기화
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -31,9 +34,12 @@ gemini_analyzer = None
 if GEMINI_API_KEY:
     try:
         gemini_analyzer = GeminiAnalyzer(GEMINI_API_KEY)
+        print(f"Gemini API 초기화 성공")
     except Exception as e:
         print(f"Gemini API 초기화 실패: {e}")
         gemini_analyzer = None
+else:
+    print("경고: GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
 
 @app.route('/')
 def index():
