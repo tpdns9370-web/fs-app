@@ -21,15 +21,19 @@ corp_db = CorpDatabase(XML_PATH)
 
 # 오픈다트 API 초기화
 OPENDART_API_KEY = os.getenv('OPENDART_API_KEY')
-if not OPENDART_API_KEY:
-    raise ValueError('OPENDART_API_KEY 환경 변수가 설정되지 않았습니다.')
-opendart_api = OpenDartAPI(OPENDART_API_KEY)
+opendart_api = None
+if OPENDART_API_KEY:
+    opendart_api = OpenDartAPI(OPENDART_API_KEY)
 
 # Gemini API 초기화
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise ValueError('GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.')
-gemini_analyzer = GeminiAnalyzer(GEMINI_API_KEY)
+gemini_analyzer = None
+if GEMINI_API_KEY:
+    try:
+        gemini_analyzer = GeminiAnalyzer(GEMINI_API_KEY)
+    except Exception as e:
+        print(f"Gemini API 초기화 실패: {e}")
+        gemini_analyzer = None
 
 @app.route('/')
 def index():
@@ -71,12 +75,21 @@ def financial_view(corp_code):
     if not corp_info:
         return "회사 정보를 찾을 수 없습니다.", 404
     
+    if not opendart_api:
+        return "오픈다트 API가 설정되지 않았습니다.", 500
+    
     current_year = opendart_api.get_current_year()
     return render_template('financial.html', corp_info=corp_info, current_year=current_year)
 
 @app.route('/api/financial', methods=['GET'])
 def get_financial_data():
     """재무 데이터 조회 API"""
+    if not opendart_api:
+        return jsonify({
+            'success': False,
+            'message': '오픈다트 API가 설정되지 않았습니다.'
+        }), 500
+    
     corp_code = request.args.get('corp_code', '').strip()
     bsns_year = request.args.get('bsns_year', '').strip()
     reprt_code = request.args.get('reprt_code', '11011').strip()
@@ -117,6 +130,12 @@ def get_financial_data():
 @app.route('/api/analyze', methods=['POST'])
 def analyze_financial():
     """AI 재무 분석 API"""
+    if not gemini_analyzer:
+        return jsonify({
+            'success': False,
+            'message': 'Gemini API가 설정되지 않았습니다. 환경 변수 GEMINI_API_KEY를 확인해주세요.'
+        }), 500
+    
     data = request.get_json()
     
     corp_code = data.get('corp_code', '').strip()
