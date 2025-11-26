@@ -20,11 +20,15 @@ XML_PATH = os.path.join(os.path.dirname(__file__), 'corp.xml')
 corp_db = CorpDatabase(XML_PATH)
 
 # 오픈다트 API 초기화
-OPENDART_API_KEY = os.getenv('OPENDART_API_KEY', 'bd9e7b33ff4b447e8fb90fd2d4c945951b574741')
+OPENDART_API_KEY = os.getenv('OPENDART_API_KEY')
+if not OPENDART_API_KEY:
+    raise ValueError('OPENDART_API_KEY 환경 변수가 설정되지 않았습니다.')
 opendart_api = OpenDartAPI(OPENDART_API_KEY)
 
 # Gemini API 초기화
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyBoDeXHFXIyBA5nD6oiRsOZXgLMyo8MR1E')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+if not GEMINI_API_KEY:
+    raise ValueError('GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.')
 gemini_analyzer = GeminiAnalyzer(GEMINI_API_KEY)
 
 @app.route('/')

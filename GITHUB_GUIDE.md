@@ -127,9 +127,9 @@
      ```
 6. "Advanced" 클릭하여 환경 변수 추가:
    - **Key**: `OPENDART_API_KEY`
-     **Value**: `bd9e7b33ff4b447e8fb90fd2d4c945951b574741`
+     **Value**: (오픈다트에서 발급받은 API 키 입력)
    - **Key**: `GEMINI_API_KEY`
-     **Value**: `AIzaSyBoDeXHFXIyBA5nD6oiRsOZXgLMyo8MR1E`
+     **Value**: (Google AI Studio에서 발급받은 API 키 입력)
 7. "Create Web Service" 클릭
 
 ### 4-3. 배포 대기

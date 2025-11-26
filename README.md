@@ -67,6 +67,10 @@ gunicorn app:app --bind 0.0.0.0:5001
    - `GEMINI_API_KEY`
 4. 배포 완료!
 
+### 배포된 웹사이트
+
+배포된 웹사이트는 [Render 대시보드](https://dashboard.render.com)에서 확인하거나, GitHub 저장소 페이지의 "About" 섹션에서 확인할 수 있습니다.
+
 ## 프로젝트 구조
 
 ```
